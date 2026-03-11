@@ -1,0 +1,953 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🛡️ نظام التتبع الذكي - السودان</title>
+    
+    <!-- Leaflet -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap');
+        
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body { 
+            font-family: 'Cairo', sans-serif; 
+            background: linear-gradient(135deg, #0a0a0a 0%, #1a1a2e 50%, #16213e 100%);
+            color: #ffffff; 
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+        
+        /* ===== HEADER ===== */
+        .main-header {
+            background: linear-gradient(90deg, #00d9ff, #10b981);
+            padding: 20px;
+            text-align: center;
+            box-shadow: 0 5px 30px rgba(0,217,255,0.3);
+        }
+        
+        .main-header h1 {
+            font-size: 2.2em;
+            font-weight: 800;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+        
+        .main-header p {
+            font-size: 1.1em;
+            opacity: 0.9;
+            margin-top: 5px;
+        }
+        
+        /* ===== MODE SELECTOR ===== */
+        .mode-selector {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            padding: 20px;
+            background: rgba(0,0,0,0.3);
+        }
+        
+        .mode-btn {
+            flex: 1;
+            max-width: 300px;
+            padding: 20px 30px;
+            border: 3px solid rgba(255,255,255,0.2);
+            border-radius: 15px;
+            background: rgba(255,255,255,0.05);
+            color: white;
+            font-family: 'Cairo', sans-serif;
+            font-size: 1.2em;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+        
+        .mode-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+        }
+        
+        .mode-btn.active.normal {
+            background: linear-gradient(135deg, #00d9ff, #10b981);
+            border-color: #00d9ff;
+            box-shadow: 0 0 30px rgba(0,217,255,0.4);
+        }
+        
+        .mode-btn.active.theft {
+            background: linear-gradient(135deg, #dc2626, #ef4444);
+            border-color: #ef4444;
+            box-shadow: 0 0 30px rgba(220,38,38,0.4);
+            animation: emergencyPulse 2s infinite;
+        }
+        
+        @keyframes emergencyPulse {
+            0%, 100% { box-shadow: 0 0 30px rgba(220,38,38,0.4); }
+            50% { box-shadow: 0 0 50px rgba(220,38,38,0.6); }
+        }
+        
+        /* ===== MAIN LAYOUT ===== */
+        .app-container {
+            display: grid;
+            grid-template-columns: 350px 1fr;
+            height: calc(100vh - 200px);
+            gap: 20px;
+            padding: 20px;
+        }
+        
+        @media (max-width: 900px) {
+            .app-container { grid-template-columns: 1fr; height: auto; }
+        }
+        
+        /* ===== SIDEBAR ===== */
+        .sidebar {
+            background: rgba(255,255,255,0.05);
+            border-radius: 20px;
+            padding: 20px;
+            overflow-y: auto;
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+        
+        .section-title {
+            color: #00d9ff;
+            font-size: 1.3em;
+            font-weight: 700;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid rgba(0,217,255,0.3);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        /* Cities */
+        .cities-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+            margin-bottom: 20px;
+        }
+        
+        .city-btn {
+            padding: 10px;
+            background: rgba(0,217,255,0.1);
+            border: 1px solid rgba(0,217,255,0.3);
+            border-radius: 10px;
+            color: white;
+            font-family: 'Cairo', sans-serif;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-size: 0.9em;
+        }
+        
+        .city-btn:hover {
+            background: rgba(0,217,255,0.3);
+            transform: scale(1.05);
+        }
+        
+        /* Device List */
+        .device-card {
+            background: linear-gradient(135deg, rgba(0,217,255,0.1), rgba(16,185,129,0.05));
+            border: 2px solid rgba(0,217,255,0.3);
+            border-radius: 15px;
+            padding: 15px;
+            margin-bottom: 12px;
+            cursor: pointer;
+            transition: all 0.3s;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .device-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent);
+            transition: left 0.5s;
+        }
+        
+        .device-card:hover::before {
+            left: 100%;
+        }
+        
+        .device-card:hover {
+            transform: translateX(-5px);
+            border-color: #00d9ff;
+        }
+        
+        .device-card.active {
+            background: rgba(0,217,255,0.2);
+            border-color: #00d9ff;
+            box-shadow: 0 0 20px rgba(0,217,255,0.3);
+        }
+        
+        .device-card.stolen {
+            background: linear-gradient(135deg, rgba(220,38,38,0.2), rgba(239,68,68,0.1));
+            border-color: #ef4444;
+            animation: stolenAlert 2s infinite;
+        }
+        
+        @keyframes stolenAlert {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(239,68,68,0.4); }
+            50% { box-shadow: 0 0 20px 5px rgba(239,68,68,0.2); }
+        }
+        
+        .device-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+        
+        .device-name {
+            font-weight: 700;
+            font-size: 1.1em;
+        }
+        
+        .device-badge {
+            font-size: 0.75em;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-weight: 600;
+        }
+        
+        .badge-safe { background: rgba(16,185,129,0.3); color: #10b981; }
+        .badge-stolen { background: rgba(239,68,68,0.3); color: #ef4444; animation: blink 1s infinite; }
+        
+        @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+        
+        .device-info {
+            font-size: 0.85em;
+            color: #a0a0a0;
+            line-height: 1.8;
+        }
+        
+        .device-coords {
+            font-family: 'Courier New', monospace;
+            background: rgba(0,0,0,0.3);
+            padding: 8px;
+            border-radius: 8px;
+            margin-top: 8px;
+            font-size: 0.8em;
+            direction: ltr;
+        }
+        
+        /* Controls */
+        .controls {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-top: 20px;
+        }
+        
+        .btn {
+            padding: 12px;
+            border: none;
+            border-radius: 10px;
+            font-family: 'Cairo', sans-serif;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-size: 0.95em;
+        }
+        
+        .btn-primary { 
+            background: linear-gradient(135deg, #00d9ff, #10b981); 
+            color: white; 
+        }
+        
+        .btn-danger { 
+            background: linear-gradient(135deg, #dc2626, #ef4444); 
+            color: white; 
+        }
+        
+        .btn-warning { 
+            background: linear-gradient(135deg, #f59e0b, #fbbf24); 
+            color: #000; 
+        }
+        
+        .btn-secondary { 
+            background: rgba(255,255,255,0.1); 
+            color: white; 
+            border: 1px solid rgba(255,255,255,0.3); 
+        }
+        
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(0,0,0,0.3);
+        }
+        
+        /* ===== MAP ===== */
+        .map-container {
+            background: rgba(255,255,255,0.05);
+            border-radius: 20px;
+            overflow: hidden;
+            border: 2px solid rgba(0,217,255,0.3);
+            position: relative;
+        }
+        
+        #map { 
+            height: 100%; 
+            width: 100%;
+            background: #0a0a0a;
+            min-height: 400px;
+        }
+        
+        /* Map Controls Overlay */
+        .map-overlay {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            right: 20px;
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            z-index: 1000;
+        }
+        
+        /* Stats Bar */
+        .stats-bar {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 15px;
+            padding: 15px 20px;
+            background: rgba(0,0,0,0.3);
+        }
+        
+        .stat-item {
+            text-align: center;
+            padding: 15px;
+            background: rgba(255,255,255,0.05);
+            border-radius: 12px;
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+        
+        .stat-value {
+            font-size: 2em;
+            font-weight: 800;
+            color: #00d9ff;
+        }
+        
+        .stat-label {
+            font-size: 0.9em;
+            color: #a0a0a0;
+            margin-top: 5px;
+        }
+        
+        /* Modal */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background: rgba(0,0,0,0.9);
+            z-index: 10000;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        .modal.active { display: flex; }
+        
+        .modal-content {
+            background: linear-gradient(135deg, #1a1a2e, #16213e);
+            border: 3px solid #00d9ff;
+            border-radius: 20px;
+            padding: 30px;
+            width: 90%;
+            max-width: 450px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+        }
+        
+        .modal-title {
+            color: #00d9ff;
+            font-size: 1.5em;
+            font-weight: 700;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        
+        .input-group {
+            margin-bottom: 15px;
+        }
+        
+        .input-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: #a0a0a0;
+            font-weight: 600;
+        }
+        
+        .input-group input, .input-group select {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid rgba(255,255,255,0.2);
+            border-radius: 10px;
+            background: rgba(0,0,0,0.3);
+            color: white;
+            font-family: 'Cairo', sans-serif;
+            font-size: 1em;
+        }
+        
+        .input-group input:focus, .input-group select:focus {
+            outline: none;
+            border-color: #00d9ff;
+        }
+        
+        /* Toast */
+        .toast {
+            position: fixed;
+            top: 100px;
+            right: 30px;
+            padding: 15px 25px;
+            border-radius: 12px;
+            font-weight: 700;
+            transform: translateX(400px);
+            transition: transform 0.3s;
+            z-index: 10001;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+        }
+        
+        .toast.show { transform: translateX(0); }
+        .toast.success { background: linear-gradient(135deg, #00d9ff, #10b981); color: white; }
+        .toast.error { background: linear-gradient(135deg, #dc2626, #ef4444); color: white; }
+        .toast.warning { background: linear-gradient(135deg, #f59e0b, #fbbf24); color: #000; }
+        
+        /* Loading */
+        .loading-screen {
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background: #0a0a0a;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 99999;
+        }
+        
+        .loading-spinner {
+            width: 80px;
+            height: 80px;
+            border: 5px solid rgba(0,217,255,0.2);
+            border-top-color: #00d9ff;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin { to { transform: rotate(360deg); } }
+        
+        .loading-text {
+            margin-top: 20px;
+            font-size: 1.2em;
+            color: #00d9ff;
+        }
+        
+        .loading-skip {
+            margin-top: 30px;
+            padding: 10px 30px;
+            background: rgba(255,255,255,0.1);
+            border: 2px solid #00d9ff;
+            color: #00d9ff;
+            border-radius: 25px;
+            cursor: pointer;
+            font-family: 'Cairo', sans-serif;
+        }
+    </style>
+</head>
+<body>
+    <!-- Loading Screen -->
+    <div class="loading-screen" id="loading">
+        <div class="loading-spinner"></div>
+        <div class="loading-text">جاري تحميل النظام...</div>
+        <button class="loading-skip" onclick="document.getElementById('loading').style.display='none'">
+            تخطي الانتظار
+        </button>
+    </div>
+    
+    <!-- Toast -->
+    <div class="toast" id="toast"></div>
+
+    <!-- Header -->
+    <header class="main-header">
+        <h1>🛡️ نظام التتبع الذكي</h1>
+        <p>السودان 🇸🇩 | تتبع عادي + مكافحة سرقة | Sudan Smart Tracker</p>
+    </header>
+    
+    <!-- Mode Selector -->
+    <div class="mode-selector">
+        <button class="mode-btn active normal" id="btnNormal" onclick="app.setMode('normal')">
+            <span style="font-size: 1.5em;">📍</span>
+            <div>
+                <div>وضع التتبع العادي</div>
+                <small style="opacity: 0.8; font-size: 0.75em;">بطيء - موفر للبطارية</small>
+            </div>
+        </button>
+        <button class="mode-btn" id="btnTheft" onclick="app.setMode('theft')">
+            <span style="font-size: 1.5em;">🚨</span>
+            <div>
+                <div>وضع مكافحة السرقة</div>
+                <small style="opacity: 0.8; font-size: 0.75em;">سريع - دقيق - طوارئ</small>
+            </div>
+        </button>
+    </div>
+    
+    <!-- Stats -->
+    <div class="stats-bar">
+        <div class="stat-item">
+            <div class="stat-value" id="statTotal">0</div>
+            <div class="stat-label">الأجهزة</div>
+        </div>
+        <div class="stat-item">
+            <div class="stat-value" id="statOnline" style="color: #10b981;">0</div>
+            <div class="stat-label">متصل الآن</div>
+        </div>
+        <div class="stat-item">
+            <div class="stat-value" id="statCities" style="color: #f59e0b;">0</div>
+            <div class="stat-label">المدن</div>
+        </div>
+        <div class="stat-item">
+            <div class="stat-value" id="statAlerts" style="color: #ef4444;">0</div>
+            <div class="stat-label">تنبيهات</div>
+        </div>
+    </div>
+
+    <!-- Main App -->
+    <div class="app-container">
+        <!-- Sidebar -->
+        <div class="sidebar">
+            <div class="section-title">🏙️ مدن السودان</div>
+            <div class="cities-grid" id="citiesList"></div>
+            
+            <div class="section-title">📱 الأجهزة المُتصلة</div>
+            <div id="deviceList"></div>
+            
+            <div class="controls">
+                <button class="btn btn-primary" onclick="app.openAddModal()">➕ إضافة</button>
+                <button class="btn btn-warning" onclick="app.showAllDevices()">🎯 الكل</button>
+                <button class="btn btn-danger" onclick="app.reportTheft()" style="grid-column: span 2;">🚨 بلاغ سرقة</button>
+            </div>
+        </div>
+        
+        <!-- Map -->
+        <div class="map-container">
+            <div id="map"></div>
+            <div class="map-overlay">
+                <button class="btn btn-primary" onclick="app.locateMe()">📍 موقعي</button>
+                <button class="btn btn-secondary" onclick="app.refreshMap()">🔄 تحديث</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal -->
+    <div class="modal" id="addModal">
+        <div class="modal-content">
+            <h3 class="modal-title">➕ إضافة جهاز جديد</h3>
+            <div class="input-group">
+                <label>اسم الجهاز</label>
+                <input type="text" id="inputName" placeholder="مثال: هاتف أحمد">
+            </div>
+            <div class="input-group">
+                <label>المدينة</label>
+                <select id="inputCity"></select>
+            </div>
+            <div class="input-group">
+                <label>رقم الهاتف (اختياري)</label>
+                <input type="text" id="inputPhone" placeholder="+249 9xxxxxxxx">
+            </div>
+            <button class="btn btn-primary" onclick="app.addDevice()" style="width: 100%; margin-top: 10px;">
+                إضافة الجهاز
+            </button>
+            <button class="btn btn-secondary" onclick="app.closeModal()" style="width: 100%; margin-top: 10px;">
+                إلغاء
+            </button>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script>
+        // ===== التطبيق الرئيسي =====
+        class SmartTracker {
+            constructor() {
+                this.devices = [];
+                this.map = null;
+                this.markers = {};
+                this.currentMode = 'normal';
+                this.selectedDevice = null;
+                this.updateInterval = null;
+                this.cities = {};
+                
+                this.init();
+            }
+            
+            init() {
+                // تعريف المدن
+                this.setupCities();
+                
+                // تهيئة الخريطة
+                this.initMap();
+                
+                // إخفاء التحميل
+                setTimeout(() => {
+                    document.getElementById('loading').style.display = 'none';
+                    this.showToast('✅ نظام التتبع الذكي جاهز!', 'success');
+                }, 1500);
+                
+                // جهاز تجريبي
+                this.addDemoDevice();
+            }
+            
+            setupCities() {
+                this.cities = {
+                    khartoum: { lat: 15.5007, lng: 32.5599, name: 'الخرطوم', region: 'الوسطى' },
+                    omdurman: { lat: 15.6454, lng: 32.4777, name: 'أم درمان', region: 'الخرطوم' },
+                    bahri: { lat: 15.6454, lng: 32.5456, name: 'بحري', region: 'الخرطوم' },
+                    portSudan: { lat: 19.6167, lng: 37.2167, name: 'بورتسودان', region: 'البحر الأحمر' },
+                    madani: { lat: 14.4012, lng: 33.5199, name: 'المدني', region: 'الجزيرة' },
+                    elobeid: { lat: 13.1833, lng: 30.2167, name: 'الأبيض', region: 'كردفان' },
+                    nyala: { lat: 12.0500, lng: 24.8833, name: 'نيالا', region: 'دارفور' },
+                    kassala: { lat: 15.4500, lng: 36.4000, name: 'كسلا', region: 'كسلا' },
+                    dongola: { lat: 19.1698, lng: 30.4750, name: 'دنقلا', region: 'الشمالية' },
+                    atbara: { lat: 17.7022, lng: 33.9861, name: 'عطبرة', region: 'نهر النيل' },
+                    merowe: { lat: 18.4833, lng: 31.8167, name: 'مروي', region: 'الشمالية' },
+                    shendi: { lat: 16.6833, lng: 33.4333, name: 'شندي', region: 'نهر النيل' }
+                };
+                
+                // تعبئة القائمة
+                const citySelect = document.getElementById('inputCity');
+                const citiesGrid = document.getElementById('citiesList');
+                
+                Object.entries(this.cities).forEach(([key, city]) => {
+                    // في القائمة المنسدلة
+                    const option = document.createElement('option');
+                    option.value = key;
+                    option.textContent = city.name;
+                    citySelect.appendChild(option);
+                    
+                    // في الشبكة
+                    const btn = document.createElement('button');
+                    btn.className = 'city-btn';
+                    btn.textContent = city.name;
+                    btn.onclick = () => this.flyToCity(key);
+                    citiesGrid.appendChild(btn);
+                });
+            }
+            
+            initMap() {
+                this.map = L.map('map').setView([15.5007, 32.5599], 13);
+                
+                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                    attribution: '© OpenStreetMap contributors',
+                    maxZoom: 19,
+                    minZoom: 5
+                }).addTo(this.map);
+            }
+            
+            setMode(mode) {
+                this.currentMode = mode;
+                
+                // تحديث الأزرار
+                document.getElementById('btnNormal').className = 'mode-btn ' + (mode === 'normal' ? 'active normal' : '');
+                document.getElementById('btnTheft').className = 'mode-btn ' + (mode === 'theft' ? 'active theft' : '');
+                
+                // إعادة تشغيل التحديث
+                this.startTracking();
+                
+                // رسالة
+                const msg = mode === 'normal' 
+                    ? '📍 وضع التتبع العادي: تحديث كل 30 ثانية (توفير البطارية)' 
+                    : '🚨 وضع مكافحة السرقة: تحديث كل ثانية (دقة عالية)';
+                this.showToast(msg, mode === 'theft' ? 'error' : 'success');
+            }
+            
+            startTracking() {
+                // إيقاف القديم
+                if (this.updateInterval) clearInterval(this.updateInterval);
+                
+                // سرعة التحديث حسب الوضع
+                const interval = this.currentMode === 'normal' ? 30000 : 1000;
+                
+                this.updateInterval = setInterval(() => {
+                    this.devices.forEach(device => {
+                        if (device.status === 'offline') return;
+                        
+                        // حركة عشوائية
+                        const speed = this.currentMode === 'theft' ? 0.002 : 0.0003;
+                        device.lat += (Math.random() - 0.5) * speed;
+                        device.lng += (Math.random() - 0.5) * speed;
+                        device.battery = Math.max(0, device.battery - (this.currentMode === 'theft' ? 0.5 : 0.05));
+                        device.lastUpdate = new Date();
+                        
+                        // تحديث على الخريطة
+                        this.updateDeviceOnMap(device.id, device.lat, device.lng);
+                    });
+                    
+                    this.updateDeviceList();
+                    this.updateStats();
+                    
+                }, interval);
+            }
+            
+            addDemoDevice() {
+                const demo = {
+                    id: 'DEV-' + Date.now(),
+                    name: 'هاتفي - الخرطوم',
+                    lat: 15.5007,
+                    lng: 32.5599,
+                    battery: 85,
+                    status: 'active',
+                    city: 'الخرطوم',
+                    lastUpdate: new Date()
+                };
+                
+                this.devices.push(demo);
+                this.addMarker(demo);
+                this.updateDeviceList();
+                this.updateStats();
+                this.startTracking();
+            }
+            
+            addMarker(device) {
+                const isStolen = device.status === 'stolen';
+                
+                const icon = L.divIcon({
+                    html: `
+                        <div style="
+                            width: ${isStolen ? 50 : 35}px;
+                            height: ${isStolen ? 50 : 35}px;
+                            background: ${isStolen ? '#ef4444' : '#00d9ff'};
+                            border-radius: 50%;
+                            border: 3px solid white;
+                            box-shadow: 0 0 20px ${isStolen ? '#ef4444' : '#00d9ff'};
+                            display: flex;
+                            align-items: center;
+                            justify-content: center;
+                            color: white;
+                            font-weight: 700;
+                            font-size: ${isStolen ? 20 : 14}px;
+                            ${isStolen ? 'animation: pulse 1s infinite;' : ''}
+                        ">
+                            ${isStolen ? '🚨' : '📱'}
+                        </div>
+                    `,
+                    className: 'device-marker',
+                    iconSize: [isStolen ? 50 : 35, isStolen ? 50 : 35],
+                    iconAnchor: [isStolen ? 25 : 17, isStolen ? 25 : 17]
+                });
+                
+                const marker = L.marker([device.lat, device.lng], { icon }).addTo(this.map);
+                
+                marker.bindPopup(`
+                    <div style="font-family: Cairo, sans-serif; text-align: center; min-width: 200px;">
+                        <h3 style="color: ${isStolen ? '#ef4444' : '#00d9ff'}; margin-bottom: 10px;">
+                            ${isStolen ? '🚨 ' : ''}${device.name}
+                        </h3>
+                        <p style="margin: 5px 0;">🔋 البطارية: ${device.battery.toFixed(1)}%</p>
+                        <p style="margin: 5px 0;">📍 ${device.city}</p>
+                        <p style="margin: 5px 0; font-size: 0.85em; color: #666;">
+                            ${device.lastUpdate.toLocaleTimeString('ar-SD')}
+                        </p>
+                    </div>
+                `);
+                
+                marker.on('click', () => {
+                    this.selectDevice(device.id);
+                });
+                
+                this.markers[device.id] = marker;
+            }
+            
+            updateDeviceOnMap(id, lat, lng) {
+                const marker = this.markers[id];
+                if (marker) {
+                    marker.setLatLng([lat, lng]);
+                }
+            }
+            
+            openAddModal() {
+                document.getElementById('addModal').classList.add('active');
+            }
+            
+            closeModal() {
+                document.getElementById('addModal').classList.remove('active');
+            }
+            
+            addDevice() {
+                const name = document.getElementById('inputName').value || 'جهاز جديد';
+                const cityKey = document.getElementById('inputCity').value;
+                const phone = document.getElementById('inputPhone').value;
+                const city = this.cities[cityKey];
+                
+                if (!city) {
+                    this.showToast('❌ اختر مدينة', 'error');
+                    return;
+                }
+                
+                const device = {
+                    id: 'DEV-' + Date.now(),
+                    name: name,
+                    lat: city.lat + (Math.random() - 0.5) * 0.02,
+                    lng: city.lng + (Math.random() - 0.5) * 0.02,
+                    battery: 85,
+                    status: 'active',
+                    city: city.name,
+                    phone: phone,
+                    lastUpdate: new Date()
+                };
+                
+                this.devices.push(device);
+                this.addMarker(device);
+                this.updateDeviceList();
+                this.updateStats();
+                
+                this.closeModal();
+                this.showToast(`✅ تم إضافة ${name}`, 'success');
+                
+                // تنظيف
+                document.getElementById('inputName').value = '';
+                document.getElementById('inputPhone').value = '';
+            }
+            
+            selectDevice(id) {
+                this.selectedDevice = id;
+                const device = this.devices.find(d => d.id === id);
+                
+                if (device) {
+                    this.map.setView([device.lat, device.lng], 16);
+                    this.markers[id]?.openPopup();
+                    this.updateDeviceList();
+                }
+            }
+            
+            flyToCity(cityKey) {
+                const city = this.cities[cityKey];
+                if (city) {
+                    this.map.setView([city.lat, city.lng], 14);
+                    this.showToast(`🏙️ ${city.name} - ${city.region}`, 'success');
+                }
+            }
+            
+            showAllDevices() {
+                if (this.devices.length === 0) {
+                    this.showToast('⚠️ لا يوجد أجهزة لعرضها', 'warning');
+                    return;
+                }
+                
+                const group = new L.featureGroup(Object.values(this.markers));
+                this.map.fitBounds(group.getBounds().pad(0.1));
+                this.showToast(`🎯 تم عرض ${this.devices.length} جهاز`, 'success');
+            }
+            
+            locateMe() {
+                if (navigator.geolocation) {
+                    navigator.geolocation.getCurrentPosition(
+                        (pos) => {
+                            this.map.setView([pos.coords.latitude, pos.coords.longitude], 15);
+                            this.showToast('📍 تم تحديد موقعك', 'success');
+                        },
+                        () => {
+                            this.showToast('⚠️ لا يمكن تحديد الموقع', 'warning');
+                        }
+                    );
+                } else {
+                    this.showToast('⚠️ المتصفح لا يدعم تحديد الموقع', 'warning');
+                }
+            }
+            
+            refreshMap() {
+                this.map.invalidateSize();
+                this.showToast('🔄 تم تحديث الخريطة', 'success');
+            }
+            
+            reportTheft() {
+                if (!this.selectedDevice) {
+                    this.showToast('⚠️ اختر جهازاً أولاً من القائمة', 'warning');
+                    return;
+                }
+                
+                const device = this.devices.find(d => d.id === this.selectedDevice);
+                if (!device) return;
+                
+                device.status = 'stolen';
+                
+                // تحديث العلامة
+                this.map.removeLayer(this.markers[device.id]);
+                this.addMarker(device);
+                
+                this.updateDeviceList();
+                this.updateStats();
+                this.showToast('🚨 تم تفعيل وضع الطوارئ!', 'error');
+            }
+            
+            updateDeviceList() {
+                const list = document.getElementById('deviceList');
+                
+                if (this.devices.length === 0) {
+                    list.innerHTML = '<p style="text-align: center; color: #666; padding: 20px;">لا توجد أجهزة</p>';
+                    return;
+                }
+                
+                list.innerHTML = this.devices.map(d => {
+                    const isSelected = this.selectedDevice === d.id;
+                    const isStolen = d.status === 'stolen';
+                    
+                    return `
+                        <div class="device-card ${isStolen ? 'stolen' : ''} ${isSelected ? 'active' : ''}" 
+                             onclick="app.selectDevice('${d.id}')">
+                            <div class="device-header">
+                                <span class="device-name">${isStolen ? '🚨 ' : ''}${d.name}</span>
+                                <span class="device-badge ${isStolen ? 'badge-stolen' : 'badge-safe'}">
+                                    ${isStolen ? 'مسروق!' : 'آمن'}
+                                </span>
+                            </div>
+                            <div class="device-info">
+                                📍 ${d.city} | 🔋 ${d.battery.toFixed(1)}%
+                                ${d.phone ? '<br>📞 ' + d.phone : ''}
+                            </div>
+                            <div class="device-coords">
+                                ${d.lat.toFixed(6)}, ${d.lng.toFixed(6)}
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+            }
+            
+            updateStats() {
+                document.getElementById('statTotal').textContent = this.devices.length;
+                document.getElementById('statOnline').textContent = this.devices.filter(d => d.status === 'active').length;
+                document.getElementById('statCities').textContent = new Set(this.devices.map(d => d.city)).size;
+                document.getElementById('statAlerts').textContent = this.devices.filter(d => d.status === 'stolen').length;
+            }
+            
+            showToast(message, type = 'success') {
+                const toast = document.getElementById('toast');
+                toast.textContent = message;
+                toast.className = 'toast show ' + type;
+                
+                setTimeout(() => {
+                    toast.classList.remove('show');
+                }, 3000);
+            }
+        }
+        
+        // تشغيل التطبيق
+        const app = new SmartTracker();
+        
+        // إغلاق النافذة عند النقر خارجها
+        window.onclick = (e) => {
+            if (e.target.classList.contains('modal')) {
+                e.target.classList.remove('active');
+            }
+        };
+    </script>
+</body>
+</html>
